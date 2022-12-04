@@ -73,6 +73,7 @@ def upload_to_gcs(bucket: str, object_name: str, local_file: str):
     * local_file: source path & file-name\n
     -> return log
     """
+    
     # # WORKAROUND to prevent timeout for files > 6 MB on 800 kbps upload speed.
     # # (Ref: https://github.com/googleapis/python-storage/issues/74)
     # storage.blob._MAX_MULTIPART_SIZE = 5 * 1024 * 1024  # 5 MB
@@ -88,11 +89,13 @@ def upload_to_gcs(bucket: str, object_name: str, local_file: str):
 
     # Setting Credentials using SERVICE ACCOUNT CREDENTIALS if use ADC just remove the 'credentials param'
     # storage_client = storage.Client(credentials=AUTH_CREDS)
+    
+    
     storage_client = storage.Client()
 
-    buckt = storage_client.bucket(bucket)
+    bucket_1 = storage_client.bucket(bucket)
 
-    blob = buckt.blob(object_name)
+    blob = bucket_1.blob(object_name)
     blob.upload_from_filename(local_file)
 
 # Airflow -------------------
@@ -103,7 +106,7 @@ default_args = {
     "retries": 1,
 }
 
-# NOTE: DAG declaration - using a Context Manager (an implicit way)
+
 with DAG(
     dag_id="api-ingest-dag",
     schedule_interval="@daily",
@@ -117,6 +120,7 @@ with DAG(
     #     task_id="call_dataset_task",
     #     bash_command=f"wget {URL_API} -O {LOCAL_HOME_PATH}/{API_RESULT}"
     # )
+    
 
     call_dataset_task = PythonOperator(
         task_id="call_dataset_task",
@@ -127,6 +131,7 @@ with DAG(
         }
     )
 
+    
     save_as_csv = PythonOperator(
         task_id="save_as_csv",
         python_callable=csv_saver,
@@ -135,6 +140,7 @@ with DAG(
         }
     )
 
+    
     format_to_parquet_task = PythonOperator(
         task_id="format_to_parquet_task",
         python_callable=format_to_parquet,
@@ -143,6 +149,7 @@ with DAG(
         },
     )
 
+    
     local_to_gcs_task = PythonOperator(
         task_id="local_to_gcs_task",
         python_callable=upload_to_gcs,
@@ -153,6 +160,7 @@ with DAG(
         },
     )
 
+    
     bigquery_external_table_task = BigQueryCreateExternalTableOperator(
         task_id="bigquery_external_table_task",
         table_resource={
